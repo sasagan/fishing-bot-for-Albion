@@ -51,6 +51,12 @@ void screenshot()
     bitmap.Save(L"F:/Games/programming/c++/Albion bot/x64/Debug/screen.png", &png);
 
     DeleteObject(hBitmap);
+    DeleteObject(&gdiplusToken);
+    DeleteObject(&gdiplusStartupInput);
+    DeleteObject(scrdc);
+    DeleteObject(memdc);
+    DeleteObject(membit);
+    DeleteObject(&bitmap);
 }
 
 
@@ -109,7 +115,7 @@ int getPixelColorType(int H, int S, int V)
 }
 
 
-int colorRed(int argc, char* argv[])
+int colorRed(int argc, char* argv[], IplImage* image)
 {
     colorCount[cRED] = 0;
 
@@ -118,9 +124,9 @@ int colorRed(int argc, char* argv[])
     IplImage* hsv = 0, * dst = 0, * dst2 = 0, * color_indexes = 0;
 
     // задаём ROI
-    const char* filename = argc >= 2 ? argv[1] : "screen.png";
-    image = cvLoadImage(filename, 1);
-    Mat ref = imread(filename);
+    //const char* filename = argc >= 2 ? argv[1] : ;
+    //image = cvLoadImage(filename, 1);
+    CvMat ref = imread("screen.png");
 
     // устанавливаем ROI
     cvSetImageROI(image, cvRect(argc >= 3 ? atoi(argv[2]) : cp.x - 11, argc >= 4 ? atoi(argv[3]) : cp.y - 16, argc >= 5 ? atoi(argv[4]) : 22, argc >= 6 ? atoi(argv[5]) : 32));
@@ -171,8 +177,13 @@ int colorRed(int argc, char* argv[])
             // подсчитываем :)
             colorCount[ctype]++;
         }
-    }
+    } 
+    cvReleaseImage(&hsv);
+    cvReleaseImage(&dst);
+    cvReleaseImage(&dst2);
+    cvReleaseImage(&color_indexes);
     return colorCount[cRED];
+   
 }
 
 
@@ -188,6 +199,7 @@ int main(int argc, char* argv[])
 
     int width = templ->width;
     int height = templ->height;
+
     Sleep(8000);
     cout << "start bot" << endl;
 
@@ -212,12 +224,12 @@ int main(int argc, char* argv[])
         screenshot();
 
         const char* filename = argc >= 2 ? argv[1] : "screen.png";
-        image = cvLoadImage(filename, 1);
         printf("[i] image: %s\n", filename);
+        image = cvLoadImage(filename, 1);
         assert(image != 0);
-
-        colored = colorRed(argc, argv);
         
+
+        colored = colorRed(argc, argv, image);
 
         cout << "number of pixels: " << colored << endl;
 
@@ -227,21 +239,21 @@ int main(int argc, char* argv[])
             cout << "pattern found: yes" << endl;
             mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
             mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
+            //cvReleaseImage(&image);
             //int i = 0;
+            IplImage* res;
             while (true)
             {
                 screenshot();
-                //i++;
-                const char* filename = argc >= 2 ? argv[1] : "screen.png";
+                
+                filename = argc >= 2 ? argv[1] : "screen.png";
                 image = cvLoadImage(filename, 1);
                 printf("[i] image: %s\n", filename);
                 assert(image != 0);
 
-                
-
-
-                IplImage* res = cvCreateImage(cvSize((image->width - templ->width + 1), (image->height - templ->height + 1)), IPL_DEPTH_32F, 1);
+                res = cvCreateImage(cvSize((image->width - templ->width + 1), (image->height - templ->height + 1)), IPL_DEPTH_32F, 1);
                 cvMatchTemplate(image, templ, res, CV_TM_SQDIFF);
+               
                 // покажем что получили
                 // определение лучшее положение для сравнения
                 // (поиск минимумов и максимумов на изображении)
@@ -261,9 +273,9 @@ int main(int argc, char* argv[])
                 // выделим область прямоугольником
                 cvRectangle(image, cvPoint(minloc.x, minloc.y), cvPoint(minloc.x + templ->width - 1, minloc.y + templ->height - 1), CV_RGB(255, 0, 0), 1, 8);
                 cvRectangle(image, cvPoint(minloclimit.x, minloclimit.y), cvPoint(maxloclimit.x, maxloclimit.y), CV_RGB(255, 0, 0), 1, 8);
-
+                //colored = colorRed(argc, argv, image);
                 //colored = colorRed(argc, argv);
-
+                //colored = colorRed(argc, argv, image);
                 if (minloclimit.x < minloc.x and maxloclimit.x > minloc.x and minloclimit.y < minloc.y and maxloclimit.y > minloc.y and minloc.x < 494)
                 {
                     
@@ -272,18 +284,27 @@ int main(int argc, char* argv[])
                     mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
                     Sleep(1800);
                     mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
+                    cvReleaseImage(&res);
+                    cvReleaseImage(&image);
+                    //cvReleaseImage(&templ);
                 }
-                else if (!(minloclimit.x < minloc.x and maxloclimit.x > minloc.x and minloclimit.y < minloc.y and maxloclimit.y > minloc.y) and colorRed(argc, argv) == 0)
+                else if (!(minloclimit.x < minloc.x and maxloclimit.x > minloc.x and minloclimit.y < minloc.y and maxloclimit.y > minloc.y) and colorRed(argc, argv, image) == 0)
                 {
                     cout << "work yes" << endl;
                     mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
                     Sleep(2000);
                     mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
-                    Sleep(0.1);
+
+                    Sleep(20);
+                    cvReleaseImage(&res);
+                    cvReleaseImage(&image);
+                    //cvReleaseImage(&templ);
+                    //remove("screen.png");
                     break;
                 }
+                cvReleaseImage(&res);
                 cvReleaseImage(&image);
-                cvDestroyAllWindows();
+                //cvReleaseImage(&templ);
             }
         }
         if (colored == 0)
@@ -291,16 +312,15 @@ int main(int argc, char* argv[])
             mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
             Sleep(2000);
             mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
-            Sleep(0.1);
+            Sleep(20);
+            cvReleaseImage(&image);
         }
-        
-        
+        colored = 0;
         cvReleaseImage(&image);
-        cvDestroyAllWindows();
     }
     cvWaitKey(0);
     
-    cvReleaseImage(&templ);
+   
     
     return 0;
 }
