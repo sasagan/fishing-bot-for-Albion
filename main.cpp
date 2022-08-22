@@ -17,12 +17,11 @@ using namespace std;
 #include <opencv2/imgproc.hpp>
 #include <opencv2/core/types.hpp>
 
-#pragma comment(lib, "GdiPlus.lib") /* наш многострадальный lib-файл */
-using namespace Gdiplus; /* как хочешь, но мне не в кайф постоянно писать Gdiplus:: */
+#pragma comment(lib, "GdiPlus.lib")
+using namespace Gdiplus;
 static const GUID png =
 { 0x557cf406, 0x1a04, 0x11d3, { 0x9a, 0x73, 0x00, 0x00, 0xf8, 0x1e, 0xf3, 0x2e } };
 using namespace cv;
-
 
 void screenshot()
 {
@@ -32,18 +31,17 @@ void screenshot()
 
     HDC scrdc, memdc;
     HBITMAP membit;
-    // Получаем HDC рабочего стола
-    // Параметр HWND для рабочего стола всегда равен нулю.
+
     scrdc = GetDC(0);
-    // Определяем разрешение экрана
+
     int Height, Width;
     Height = GetSystemMetrics(SM_CYSCREEN);
     Width = GetSystemMetrics(SM_CXSCREEN);
-    // Создаем новый DC, идентичный десктоповскому и битмап размером с экран.
+
     memdc = CreateCompatibleDC(scrdc);
     membit = CreateCompatibleBitmap(scrdc, Width, Height);
     SelectObject(memdc, membit);
-    // Улыбаемся... Снято!
+
     BitBlt(memdc, 0, 0, Width, Height, scrdc, 0, 0, SRCCOPY);
     HBITMAP hBitmap;
     hBitmap = (HBITMAP)SelectObject(memdc, membit);
@@ -59,10 +57,8 @@ void screenshot()
     DeleteObject(&bitmap);
 }
 
-
 IplImage* image = 0;
 IplImage* templ = 0;
-
 
 
 #define RECT_COLORS_SIZE 10
@@ -108,8 +104,8 @@ int getPixelColorType(int H, int S, int V)
             color = cBLUE;
         else if (H < 170)
             color = cPURPLE;
-        else	// full circle 
-            color = cRED;	// back to Red
+        else
+            color = cRED;
     }
     return color;
 }
@@ -123,29 +119,19 @@ int colorRed(int argc, char* argv[], IplImage* image)
     GetCursorPos(&cp);
     IplImage* hsv = 0, * dst = 0, * dst2 = 0, * color_indexes = 0;
 
-    // задаём ROI
-    //const char* filename = argc >= 2 ? argv[1] : ;
-    //image = cvLoadImage(filename, 1);
     CvMat ref = imread("screen.png");
 
-    // устанавливаем ROI
     cvSetImageROI(image, cvRect(argc >= 3 ? atoi(argv[2]) : cp.x - 11, argc >= 4 ? atoi(argv[3]) : cp.y - 16, argc >= 5 ? atoi(argv[4]) : 22, argc >= 6 ? atoi(argv[5]) : 32));
-    //
-    // преобразуем изображение в HSV 
-    //
+
     hsv = cvCreateImage(cvGetSize(image), IPL_DEPTH_8U, 3);
     cvCvtColor(image, hsv, CV_BGR2HSV);
 
-    // картинки для хранения результатов
     dst = cvCreateImage(cvGetSize(image), IPL_DEPTH_8U, 3);
     dst2 = cvCreateImage(cvGetSize(image), IPL_DEPTH_8U, 3);
     color_indexes = cvCreateImage(cvGetSize(image), IPL_DEPTH_8U, 1); //для хранения индексов цвета
 
-    // для хранения RGB-х цветов
     CvScalar rgb_colors[NUM_COLOR_TYPES];
 
-
-    // обнуляем цвета
     for (int j = 0; j < NUM_COLOR_TYPES; j++) {
         rgb_colors[j] = cvScalarAll(0);
     }
@@ -153,28 +139,22 @@ int colorRed(int argc, char* argv[], IplImage* image)
     for (int y = 0; y < hsv->height; y++) {
         for (int x = 0; x < hsv->width; x++) {
 
-            // получаем HSV-компоненты пикселя
-            uchar H = CV_PIXEL(uchar, hsv, x, y)[0];	// Hue
-            uchar S = CV_PIXEL(uchar, hsv, x, y)[1];	// Saturation
-            uchar V = CV_PIXEL(uchar, hsv, x, y)[2];	// Value (Brightness)
+            uchar H = CV_PIXEL(uchar, hsv, x, y)[0];
+            uchar S = CV_PIXEL(uchar, hsv, x, y)[1];
+            uchar V = CV_PIXEL(uchar, hsv, x, y)[2];
 
-            // определяем к какому цвету можно отнести данные значения
             int ctype = getPixelColorType(H, S, V);
 
-            // устанавливаем этот цвет у отладочной картинки
-            CV_PIXEL(uchar, dst, x, y)[0] = cCTHue[ctype];	// Hue
-            CV_PIXEL(uchar, dst, x, y)[1] = cCTSat[ctype];	// Saturation
-            CV_PIXEL(uchar, dst, x, y)[2] = cCTVal[ctype];	// Value
+            CV_PIXEL(uchar, dst, x, y)[0] = cCTHue[ctype];
+            CV_PIXEL(uchar, dst, x, y)[1] = cCTSat[ctype];
+            CV_PIXEL(uchar, dst, x, y)[2] = cCTVal[ctype];
 
-            // собираем RGB-составляющие
-            rgb_colors[ctype].val[0] += CV_PIXEL(uchar, image, x, y)[0]; // B
-            rgb_colors[ctype].val[1] += CV_PIXEL(uchar, image, x, y)[1]; // G
-            rgb_colors[ctype].val[2] += CV_PIXEL(uchar, image, x, y)[2]; // R
+            rgb_colors[ctype].val[0] += CV_PIXEL(uchar, image, x, y)[0];
+            rgb_colors[ctype].val[1] += CV_PIXEL(uchar, image, x, y)[1];
+            rgb_colors[ctype].val[2] += CV_PIXEL(uchar, image, x, y)[2];
 
-            // сохраняем к какому типу относится цвет
             CV_PIXEL(uchar, color_indexes, x, y)[0] = ctype;
 
-            // подсчитываем :)
             colorCount[ctype]++;
         }
     } 
@@ -185,10 +165,6 @@ int colorRed(int argc, char* argv[], IplImage* image)
     return colorCount[cRED];
    
 }
-
-
-
-
 
 int main(int argc, char* argv[])
 {
@@ -206,19 +182,6 @@ int main(int argc, char* argv[])
     int coof = 75;
     int colored;
 
-    /*while (true)
-    {
-        screenshot();
-
-        const char* filename = argc >= 2 ? argv[1] : "screen.png";
-        image = cvLoadImage(filename, 1);
-        printf("[i] image: %s\n", filename);
-        assert(image != 0);
-
-
-        cout << "number of pixels: " << colorRed(argc, argv) << endl;
-    }*/
-
     while (true)
     {
         screenshot();
@@ -234,14 +197,15 @@ int main(int argc, char* argv[])
         cout << "number of pixels: " << colored << endl;
 
 
-        if (colored < coof and colored != 0)
+        if (colored > 10 and colored < coof and colored != 0)
         {
             cout << "pattern found: yes" << endl;
             mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
             mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
-            //cvReleaseImage(&image);
-            //int i = 0;
+            int i = 0;
+            Sleep(510);
             IplImage* res;
+            
             while (true)
             {
                 screenshot();
@@ -254,73 +218,75 @@ int main(int argc, char* argv[])
                 res = cvCreateImage(cvSize((image->width - templ->width + 1), (image->height - templ->height + 1)), IPL_DEPTH_32F, 1);
                 cvMatchTemplate(image, templ, res, CV_TM_SQDIFF);
                
-                // покажем что получили
-                // определение лучшее положение для сравнения
-                // (поиск минимумов и максимумов на изображении)
                 double    minval, maxval;
                 CvPoint    minloc, maxloc, minloclimit, maxloclimit;
 
                 minloclimit.x = 420;
                 minloclimit.y = 382;
                 maxloclimit.x = 598;
-                maxloclimit.y = 430;
+                maxloclimit.y = 490;
 
                 cvMinMaxLoc(res, &minval, &maxval, &minloc, &maxloc, 0);
-                // нормализуем
+                
                 cvNormalize(res, res, 1, 0, CV_MINMAX);
-                // cvNamedWindow("res norm", CV_WINDOW_AUTOSIZE);
-                //cvShowImage("res norm", res);
-                // выделим область прямоугольником
-                cvRectangle(image, cvPoint(minloc.x, minloc.y), cvPoint(minloc.x + templ->width - 1, minloc.y + templ->height - 1), CV_RGB(255, 0, 0), 1, 8);
-                cvRectangle(image, cvPoint(minloclimit.x, minloclimit.y), cvPoint(maxloclimit.x, maxloclimit.y), CV_RGB(255, 0, 0), 1, 8);
-                //colored = colorRed(argc, argv, image);
-                //colored = colorRed(argc, argv);
-                //colored = colorRed(argc, argv, image);
-                if (minloclimit.x < minloc.x and maxloclimit.x > minloc.x and minloclimit.y < minloc.y and maxloclimit.y > minloc.y and minloc.x < 494)
+                
+                cout << "minval: " << minval << endl;
+                i++;
+                if (minval <= 16500000)
                 {
-                    
-                    cout << minloc.x << endl;
-                    cout << minloc.y << endl;
-                    mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
-                    Sleep(1800);
-                    mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
-                    cvReleaseImage(&res);
-                    cvReleaseImage(&image);
-                    //cvReleaseImage(&templ);
+
+                    if (minloc.x < 494)
+                    {
+                        i = 0;
+                        cout << minloc.x << endl;
+                        cout << minloc.y << endl;
+                        mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
+                        Sleep(1800);
+                        mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
+                        cvReleaseImage(&res);
+                        cvReleaseImage(&image);
+                    }
+                    else if (minloc.x >= 495)
+                    {
+                        continue;
+                    }
+
                 }
-                else if (!(minloclimit.x < minloc.x and maxloclimit.x > minloc.x and minloclimit.y < minloc.y and maxloclimit.y > minloc.y) and colorRed(argc, argv, image) == 0)
+                else if (minval > 16500000)
                 {
                     cout << "work yes" << endl;
-                    mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
-                    Sleep(2000);
-                    mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
-
-                    Sleep(20);
+                    
                     cvReleaseImage(&res);
                     cvReleaseImage(&image);
-                    //cvReleaseImage(&templ);
-                    //remove("screen.png");
+
+                    Sleep(1900);
                     break;
                 }
+
+                if (i >= 6)
+                {
+                    cout << "i59fwe04fa" << endl;
+                    cvReleaseImage(&res);
+                    cvReleaseImage(&image);
+                    break;
+                }
+                
                 cvReleaseImage(&res);
                 cvReleaseImage(&image);
-                //cvReleaseImage(&templ);
             }
         }
         if (colored == 0)
         {
             mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
-            Sleep(2000);
+            Sleep(1800);
             mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
-            Sleep(20);
+            Sleep(1000);
             cvReleaseImage(&image);
         }
         colored = 0;
         cvReleaseImage(&image);
     }
     cvWaitKey(0);
-    
    
-    
     return 0;
 }
